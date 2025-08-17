@@ -15,6 +15,7 @@
 ! 2025/02/25 - Initial Version
 !------------------------------------------------------------------------------
 module approx
+  use iso_fortran_env, only: sp=>real32, dp=>real64, qp=>real128
   implicit none
   real(4), parameter :: default_stol = 1.0e-7
   double precision, parameter :: default_dtol = 1.0d-7
