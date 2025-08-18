@@ -11,9 +11,9 @@ OBJS:=$(SRC:.f90=.o)
 ####################################################
 # module information
 # MODULE_DIR - BUILD_DIR should be changed according to your environment
-MODULE_DIR:=../../../fortran-approx
-INC_DIR:=.
-BUILD_DIR:=.
+MODULE_DIR:=..
+INC_DIR:=./include
+BUILD_DIR:=./build
 MODULE_NAME:=approx
 LIB_FILE:=$(BUILD_DIR)/lib$(MODULE_NAME).a
 ABS_BUILD_DIR=$(abspath $(BUILD_DIR))
@@ -37,7 +37,7 @@ $(TARGET): $(LIB_FILE) $(OBJS)
 
 ####################################################
 # Module compilation
-LIB_SRCS := $(wildcard $(ABS_MODULE_DIR)/src/*.f90)
+LIB_SRCS := $(wildcard $(ABS_MODULE_DIR)/src/*.F90)
 $(LIB_FILE): $(LIB_SRCS) $(ABS_MODULE_DIR)/Makefile
 	@$(MAKE) -C $(ABS_MODULE_DIR) $(PASS_ARGS)
 ####################################################

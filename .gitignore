@@ -4,6 +4,7 @@
 ![M|m]akefile
 ![D|d]ockerfile
 *.exe
+a.out
 
 # OS/Editor
 Thumb.db
