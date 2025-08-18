@@ -17,687 +17,408 @@
 module approx
   use iso_fortran_env, only: sp=>real32, dp=>real64, qp=>real128, short=>int16, int=>int32, longlong=>int64
   implicit none
-  real(kind=sp), parameter :: default_stol = 1.0e-10_sp
-  real(kind=dp), parameter :: default_dtol = 1.0e-10_dp
-  real(kind=qp), parameter :: default_qtol = 1.0e-10_qp
-  interface approx_eq
-    module procedure approx_eq_ssc, approx_eq_sarr
-    module procedure approx_eq_dsc, approx_eq_darr
-    module procedure approx_eq_qsc, approx_eq_qarr
-  end interface approx_eq
-  interface approx_ne
-    module procedure approx_ne_ssc, approx_ne_sarr
-    module procedure approx_ne_dsc, approx_ne_darr
-    module procedure approx_ne_qsc, approx_ne_qarr
-  end interface approx_ne
-  interface approx_lt
-    module procedure approx_lt_ssc, approx_lt_sarr
-    module procedure approx_lt_dsc, approx_lt_darr
-    module procedure approx_lt_qsc, approx_lt_qarr
-  end interface approx_lt
-  interface approx_le
-    module procedure approx_le_ssc, approx_le_sarr
-    module procedure approx_le_dsc, approx_le_darr
-    module procedure approx_le_qsc, approx_le_qarr
-  end interface approx_le
-  interface approx_gt
-    module procedure approx_gt_ssc, approx_gt_sarr
-    module procedure approx_gt_dsc, approx_gt_darr
-    module procedure approx_gt_qsc, approx_gt_qarr
-  end interface approx_gt
-  interface approx_ge
-    module procedure approx_ge_ssc, approx_ge_sarr
-    module procedure approx_ge_dsc, approx_ge_darr
-    module procedure approx_ge_qsc, approx_ge_qarr
-  end interface approx_ge
+  private
+  type tolerance_parameter
+    real(kind=sp) :: stol = 1.0e-10_sp
+    real(kind=dp) :: dtol = 1.0e-10_dp
+    real(kind=qp) :: qtol = 1.0e-10_qp
+  end type
+  type(tolerance_parameter), parameter :: default = tolerance_parameter()
+
+  interface aeq
+    module procedure approx_eq_sp, approx_eq_dp, approx_eq_qp
+    module procedure approx_eq_sp_tol, approx_eq_dp_tol, approx_eq_qp_tol
+  end interface aeq
+  interface ane
+    module procedure approx_ne_sp, approx_ne_dp, approx_ne_qp
+    module procedure approx_ne_sp_tol, approx_ne_dp_tol, approx_ne_qp_tol
+  end interface ane
+  interface alt
+    module procedure approx_lt_sp, approx_lt_dp, approx_lt_qp
+    module procedure approx_lt_sp_tol, approx_lt_dp_tol, approx_lt_qp_tol
+  end interface alt
+  interface ale
+    module procedure approx_le_sp, approx_le_dp, approx_le_qp
+    module procedure approx_le_sp_tol, approx_le_dp_tol, approx_le_qp_tol
+  end interface ale
+  interface agt
+    module procedure approx_gt_sp, approx_gt_dp, approx_gt_qp
+    module procedure approx_gt_sp_tol, approx_gt_dp_tol, approx_gt_qp_tol
+  end interface agt
+  interface age
+    module procedure approx_ge_sp, approx_ge_dp, approx_ge_qp
+    module procedure approx_ge_sp_tol, approx_ge_dp_tol, approx_ge_qp_tol
+  end interface age
+
+  public :: aeq, ane, alt, ale, agt, age
 
   interface operator(.approx.)
-    module procedure approxop_eq_ssc, approxop_eq_sarr
-    module procedure approxop_eq_dsc, approxop_eq_darr
-    module procedure approxop_eq_qsc, approxop_eq_qarr
+    module procedure approx_eq_sp_op, approx_eq_dp_op, approx_eq_qp_op
   end interface operator(.approx.)
   interface operator(.aeq.)
-    module procedure approxop_eq_ssc, approxop_eq_sarr
-    module procedure approxop_eq_dsc, approxop_eq_darr
-    module procedure approxop_eq_qsc, approxop_eq_qarr
+    module procedure approx_eq_sp_op, approx_eq_dp_op, approx_eq_qp_op
   end interface operator(.aeq.)
   interface operator(.ane.)
-    module procedure approxop_ne_ssc, approxop_ne_sarr
-    module procedure approxop_ne_dsc, approxop_ne_darr
-    module procedure approxop_ne_qsc, approxop_ne_qarr
+    module procedure approx_ne_sp_op, approx_ne_dp_op, approx_ne_qp_op
   end interface operator(.ane.)
   interface operator(.alt.)
-    module procedure approxop_lt_ssc, approxop_lt_sarr
-    module procedure approxop_lt_dsc, approxop_lt_darr
-    module procedure approxop_lt_qsc, approxop_lt_qarr
+    module procedure approx_lt_sp_op, approx_lt_dp_op, approx_lt_qp_op
   end interface operator(.alt.)
   interface operator(.ale.)
-    module procedure approxop_le_ssc, approxop_le_sarr
-    module procedure approxop_le_dsc, approxop_le_darr
-    module procedure approxop_le_qsc, approxop_le_qarr
+    module procedure approx_le_sp_op, approx_le_dp_op, approx_le_qp_op
   end interface operator(.ale.)
   interface operator(.agt.)
-    module procedure approxop_gt_ssc, approxop_gt_sarr
-    module procedure approxop_gt_dsc, approxop_gt_darr
-    module procedure approxop_gt_qsc, approxop_gt_qarr
+    module procedure approx_gt_sp_op, approx_gt_dp_op, approx_gt_qp_op
   end interface operator(.agt.)
   interface operator(.age.)
-    module procedure approxop_ge_ssc, approxop_ge_sarr
-    module procedure approxop_ge_dsc, approxop_ge_darr
-    module procedure approxop_ge_qsc, approxop_ge_qarr
+    module procedure approx_ge_sp_op, approx_ge_dp_op, approx_ge_qp_op
   end interface operator(.age.)
+
+  public :: operator(.approx.)
+  public :: operator(.aeq.), operator(.ane.), operator(.alt.), operator(.ale.), operator(.agt.), operator(.age.)
+
 contains
-  function approx_eq_ssc(a, b, tol) result(res)
+
+  pure elemental function approx_eq_sp(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
-    real(kind=sp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = abs(a - b) .le. tol
-    else
-      res = abs(a - b) .le. default_stol
-    end if
-  end function approx_eq_ssc
+    res = abs(a - b) .le. default%stol
+  end function approx_eq_sp
   !
-  function approx_eq_sarr(a, b, tol) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    real(kind=sp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = abs(a - b) .le. tol
-    else
-      res(:) = abs(a - b) .le. default_stol
-    end if
-  end function approx_eq_sarr
-  !
-  function approx_eq_dsc(a, b, tol) result(res)
+  pure elemental function approx_eq_dp(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
-    real(kind=dp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = abs(a - b) .le. tol
-    else
-      res = abs(a - b) .le. default_dtol
-    end if
-  end function approx_eq_dsc
+    res = abs(a - b) .le. default%dtol
+  end function approx_eq_dp
   !
-  function approx_eq_darr(a, b, tol) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    real(kind=dp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = abs(a - b) .le. tol
-    else
-      res(:) = abs(a - b) .le. default_dtol
-    end if
-  end function approx_eq_darr
-  !
-  function approx_eq_qsc(a, b, tol) result(res)
+  pure elemental function approx_eq_qp(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
-    real(kind=qp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = abs(a - b) .le. tol
-    else
-      res = abs(a - b) .le. default_qtol
-    end if
-  end function approx_eq_qsc
+    res = abs(a - b) .le. default%qtol
+  end function approx_eq_qp
   !
-  function approx_eq_qarr(a, b, tol) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    real(kind=qp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = abs(a - b) .le. tol
-    else
-      res(:) = abs(a - b) .le. default_qtol
-    end if
-  end function approx_eq_qarr
+  pure elemental function approx_eq_sp_tol(a, b, tol) result(res)
+    real(kind=sp), intent(in) :: a, b
+    real(kind=sp), intent(in) :: tol
+    logical :: res
+    res = abs(a - b) .le. tol
+  end function approx_eq_sp_tol
+  !
+  pure elemental function approx_eq_dp_tol(a, b, tol) result(res)
+    real(kind=dp), intent(in) :: a, b
+    real(kind=dp), intent(in) :: tol
+    logical :: res
+    res = abs(a - b) .le. tol
+  end function approx_eq_dp_tol
+  !
+  pure elemental function approx_eq_qp_tol(a, b, tol) result(res)
+    real(kind=qp), intent(in) :: a, b
+    real(kind=qp), intent(in) :: tol
+    logical :: res
+    res = abs(a - b) .le. tol
+  end function approx_eq_qp_tol
   ! ------------------------------------------
-  function approx_ne_ssc(a, b, tol) result(res)
+  pure elemental function approx_ne_sp(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
-    real(kind=sp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = abs(a - b) .gt. tol
-    else
-      res = abs(a - b) .gt. default_stol
-    end if
-  end function approx_ne_ssc
+    res = abs(a - b) .gt. default%stol
+  end function approx_ne_sp
   !
-  function approx_ne_sarr(a, b, tol) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    real(kind=sp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = abs(a - b) .gt. tol
-    else
-      res(:) = abs(a - b) .gt. default_stol
-    end if
-  end function approx_ne_sarr
-  !
-  function approx_ne_dsc(a, b, tol) result(res)
+  pure elemental function approx_ne_dp(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
-    real(kind=dp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = abs(a - b) .gt. tol
-    else
-      res = abs(a - b) .gt. default_dtol
-    end if
-  end function approx_ne_dsc
+    res = abs(a - b) .gt. default%dtol
+  end function approx_ne_dp
   !
-  function approx_ne_darr(a, b, tol) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    real(kind=dp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = abs(a - b) .gt. tol
-    else
-      res(:) = abs(a - b) .gt. default_dtol
-    end if
-  end function approx_ne_darr
-  !
-  function approx_ne_qsc(a, b, tol) result(res)
+  pure elemental function approx_ne_qp(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
-    real(kind=qp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = abs(a - b) .gt. tol
-    else
-      res = abs(a - b) .gt. default_qtol
-    end if
-  end function approx_ne_qsc
+    res = abs(a - b) .gt. default%qtol
+  end function approx_ne_qp
   !
-  function approx_ne_qarr(a, b, tol) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    real(kind=qp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = abs(a - b) .gt. tol
-    else
-      res(:) = abs(a - b) .gt. default_qtol
-    end if
-  end function approx_ne_qarr
+  pure elemental function approx_ne_sp_tol(a, b, tol) result(res)
+    real(kind=sp), intent(in) :: a, b
+    real(kind=sp), intent(in) :: tol
+    logical :: res
+    res = abs(a - b) .gt. tol
+  end function approx_ne_sp_tol
+  !
+  pure elemental function approx_ne_dp_tol(a, b, tol) result(res)
+    real(kind=dp), intent(in) :: a, b
+    real(kind=dp), intent(in) :: tol
+    logical :: res
+    res = abs(a - b) .gt. tol
+  end function approx_ne_dp_tol
+  !
+  pure elemental function approx_ne_qp_tol(a, b, tol) result(res)
+    real(kind=qp), intent(in) :: a, b
+    real(kind=qp), intent(in) :: tol
+    logical :: res
+    res = abs(a - b) .gt. tol
+  end function approx_ne_qp_tol
   ! ------------------------------------------
-  function approx_lt_ssc(a, b, tol) result(res)
+  pure elemental function approx_lt_sp(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
-    real(kind=sp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .lt. b - tol
-    else
-      res = a .lt. b - default_stol
-    end if
-  end function approx_lt_ssc
+    res = a .lt. b - default%stol
+  end function approx_lt_sp
   !
-  function approx_lt_sarr(a, b, tol) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    real(kind=sp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .lt. b - tol
-    else
-      res(:) = a .lt. b - default_stol
-    end if
-  end function approx_lt_sarr
-  !
-  function approx_lt_dsc(a, b, tol) result(res)
+  pure elemental function approx_lt_dp(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
-    real(kind=dp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .lt. b - tol
-    else
-      res = a .lt. b - default_dtol
-    end if
-  end function approx_lt_dsc
+    res = a .lt. b - default%dtol
+  end function approx_lt_dp
   !
-  function approx_lt_darr(a, b, tol) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    real(kind=dp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .lt. b - tol
-    else
-      res(:) = a .lt. b - default_dtol
-    end if
-  end function approx_lt_darr
-  !
-  function approx_lt_qsc(a, b, tol) result(res)
+  pure elemental function approx_lt_qp(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
-    real(kind=qp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .lt. b - tol
-    else
-      res = a .lt. b - default_qtol
-    end if
-  end function approx_lt_qsc
+    res = a .lt. b - default%qtol
+  end function approx_lt_qp
   !
-  function approx_lt_qarr(a, b, tol) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    real(kind=qp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .lt. b - tol
-    else
-      res(:) = a .lt. b - default_qtol
-    end if
-  end function approx_lt_qarr
+  pure elemental function approx_lt_sp_tol(a, b, tol) result(res)
+    real(kind=sp), intent(in) :: a, b
+    real(kind=sp), intent(in) :: tol
+    logical :: res
+    res = a .lt. b - tol
+  end function approx_lt_sp_tol
+  !
+  pure elemental function approx_lt_dp_tol(a, b, tol) result(res)
+    real(kind=dp), intent(in) :: a, b
+    real(kind=dp), intent(in) :: tol
+    logical :: res
+    res = a .lt. b - tol
+  end function approx_lt_dp_tol
+  !
+  pure elemental function approx_lt_qp_tol(a, b, tol) result(res)
+    real(kind=qp), intent(in) :: a, b
+    real(kind=qp), intent(in) :: tol
+    logical :: res
+    res = a .lt. b - tol
+  end function approx_lt_qp_tol
   ! ------------------------------------------
-  function approx_le_ssc(a, b, tol) result(res)
+  pure elemental function approx_le_sp(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
-    real(kind=sp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .le. b + tol
-    else
-      res = a .le. b + default_stol
-    end if
-  end function approx_le_ssc
+    res = a .le. b + default%stol
+  end function approx_le_sp
   !
-  function approx_le_sarr(a, b, tol) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    real(kind=sp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .le. b + tol
-    else
-      res(:) = a .le. b + default_stol
-    end if
-  end function approx_le_sarr
-  !
-  function approx_le_dsc(a, b, tol) result(res)
+  pure elemental function approx_le_dp(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
-    real(kind=dp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .le. b + tol
-    else
-      res = a .le. b + default_dtol
-    end if
-  end function approx_le_dsc
+    res = a .le. b + default%dtol
+  end function approx_le_dp
   !
-  function approx_le_darr(a, b, tol) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    real(kind=dp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .le. b + tol
-    else
-      res(:) = a .le. b + default_dtol
-    end if
-  end function approx_le_darr
-  !
-  function approx_le_qsc(a, b, tol) result(res)
+  pure elemental function approx_le_qp(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
-    real(kind=qp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .le. b + tol
-    else
-      res = a .le. b + default_qtol
-    end if
-  end function approx_le_qsc
+    res = a .le. b + default%qtol
+  end function approx_le_qp
   !
-  function approx_le_qarr(a, b, tol) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    real(kind=qp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .le. b + tol
-    else
-      res(:) = a .le. b + default_qtol
-    end if
-  end function approx_le_qarr
+  pure elemental function approx_le_sp_tol(a, b, tol) result(res)
+    real(kind=sp), intent(in) :: a, b
+    real(kind=sp), intent(in) :: tol
+    logical :: res
+    res = a .le. b + tol
+  end function approx_le_sp_tol
+  !
+  pure elemental function approx_le_dp_tol(a, b, tol) result(res)
+    real(kind=dp), intent(in) :: a, b
+    real(kind=dp), intent(in) :: tol
+    logical :: res
+    res = a .le. b + tol
+  end function approx_le_dp_tol
+  !
+  pure elemental function approx_le_qp_tol(a, b, tol) result(res)
+    real(kind=qp), intent(in) :: a, b
+    real(kind=qp), intent(in) :: tol
+    logical :: res
+    res = a .le. b + tol
+  end function approx_le_qp_tol
   ! ------------------------------------------
-  function approx_gt_ssc(a, b, tol) result(res)
+  pure elemental function approx_gt_sp(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
-    real(kind=sp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .gt. b + tol
-    else
-      res = a .gt. b + default_stol
-    end if
-  end function approx_gt_ssc
+    res = a .gt. b + default%stol
+  end function approx_gt_sp
   !
-  function approx_gt_sarr(a, b, tol) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    real(kind=sp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .gt. b + tol
-    else
-      res(:) = a .gt. b + default_stol
-    end if
-  end function approx_gt_sarr
-  !
-  function approx_gt_dsc(a, b, tol) result(res)
+  pure elemental function approx_gt_dp(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
-    real(kind=dp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .gt. b + tol
-    else
-      res = a .gt. b + default_dtol
-    end if
-  end function approx_gt_dsc
+    res = a .gt. b + default%dtol
+  end function approx_gt_dp
   !
-  function approx_gt_darr(a, b, tol) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    real(kind=dp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .gt. b + tol
-    else
-      res(:) = a .gt. b + default_dtol
-    end if
-  end function approx_gt_darr
-  !
-  function approx_gt_qsc(a, b, tol) result(res)
+  pure elemental function approx_gt_qp(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
-    real(kind=qp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .gt. b + tol
-    else
-      res = a .gt. b + default_qtol
-    end if
-  end function approx_gt_qsc
+    res = a .gt. b + default%qtol
+  end function approx_gt_qp
   !
-  function approx_gt_qarr(a, b, tol) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    real(kind=qp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .gt. b + tol
-    else
-      res(:) = a .gt. b + default_qtol
-    end if
-  end function approx_gt_qarr
+  pure elemental function approx_gt_sp_tol(a, b, tol) result(res)
+    real(kind=sp), intent(in) :: a, b
+    real(kind=sp), intent(in) :: tol
+    logical :: res
+    res = a .gt. b + tol
+  end function approx_gt_sp_tol
+  !
+  pure elemental function approx_gt_dp_tol(a, b, tol) result(res)
+    real(kind=dp), intent(in) :: a, b
+    real(kind=dp), intent(in) :: tol
+    logical :: res
+    res = a .gt. b + tol
+  end function approx_gt_dp_tol
+  !
+  pure elemental function approx_gt_qp_tol(a, b, tol) result(res)
+    real(kind=qp), intent(in) :: a, b
+    real(kind=qp), intent(in) :: tol
+    logical :: res
+    res = a .gt. b + tol
+  end function approx_gt_qp_tol
   ! ------------------------------------------
-  function approx_ge_ssc(a, b, tol) result(res)
+  pure elemental function approx_ge_sp(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
-    real(kind=sp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .ge. b - tol
-    else
-      res = a .ge. b - default_stol
-    end if
-  end function approx_ge_ssc
+    res = a .ge. b - default%stol
+  end function approx_ge_sp
   !
-  function approx_ge_sarr(a, b, tol) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    real(kind=sp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .ge. b - tol
-    else
-      res(:) = a .ge. b - default_stol
-    end if
-  end function approx_ge_sarr
-  !
-  function approx_ge_dsc(a, b, tol) result(res)
+  pure elemental function approx_ge_dp(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
-    real(kind=dp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .ge. b - tol
-    else
-      res = a .ge. b - default_dtol
-    end if
-  end function approx_ge_dsc
+    res = a .ge. b - default%dtol
+  end function approx_ge_dp
   !
-  function approx_ge_darr(a, b, tol) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    real(kind=dp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .ge. b - tol
-    else
-      res(:) = a .ge. b - default_dtol
-    end if
-  end function approx_ge_darr
-  !
-  function approx_ge_qsc(a, b, tol) result(res)
+  pure elemental function approx_ge_qp(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
-    real(kind=qp), optional, intent(in) :: tol
     logical :: res
-    if (present(tol)) then
-      res = a .ge. b - tol
-    else
-      res = a .ge. b - default_qtol
-    end if
-  end function approx_ge_qsc
+    res = a .ge. b - default%qtol
+  end function approx_ge_qp
   !
-  function approx_ge_qarr(a, b, tol) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    real(kind=qp), optional, intent(in) :: tol
-    logical :: res(size(a))
-    if (present(tol)) then
-      res(:) = a .ge. b - tol
-    else
-      res(:) = a .ge. b - default_qtol
-    end if
-  end function approx_ge_qarr
+  pure elemental function approx_ge_sp_tol(a, b, tol) result(res)
+    real(kind=sp), intent(in) :: a, b
+    real(kind=sp), intent(in) :: tol
+    logical :: res
+    res = a .ge. b - tol
+  end function approx_ge_sp_tol
   !
+  pure elemental function approx_ge_dp_tol(a, b, tol) result(res)
+    real(kind=dp), intent(in) :: a, b
+    real(kind=dp), intent(in) :: tol
+    logical :: res
+    res = a .ge. b - tol
+  end function approx_ge_dp_tol
+  !
+  pure elemental function approx_ge_qp_tol(a, b, tol) result(res)
+    real(kind=qp), intent(in) :: a, b
+    real(kind=qp), intent(in) :: tol
+    logical :: res
+    res = a .ge. b - tol
+  end function approx_ge_qp_tol
   ! _/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/_/
   ! operator(.approx.)
-  function approxop_eq_ssc(a, b) result(res)
+  pure elemental function approx_eq_sp_op(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
     logical :: res
-    res = abs(a - b) .le. default_stol
-  end function approxop_eq_ssc
+    res = aeq(a, b)
+  end function approx_eq_sp_op
   !
-  function approxop_eq_sarr(a, b) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = abs(a - b) .le. default_stol
-  end function approxop_eq_sarr
-  !
-  function approxop_eq_dsc(a, b) result(res)
+  pure elemental function approx_eq_dp_op(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
     logical :: res
-    res = abs(a - b) .le. default_dtol
-  end function approxop_eq_dsc
+    res = aeq(a, b)
+  end function approx_eq_dp_op
   !
-  function approxop_eq_darr(a, b) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = abs(a - b) .le. default_dtol
-  end function approxop_eq_darr
-  !
-  function approxop_eq_qsc(a, b) result(res)
+  pure elemental function approx_eq_qp_op(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
     logical :: res
-    res = abs(a - b) .le. default_qtol
-  end function approxop_eq_qsc
-  !
-  function approxop_eq_qarr(a, b) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = abs(a - b) .le. default_qtol
-  end function approxop_eq_qarr
+    res = aeq(a, b)
+  end function approx_eq_qp_op
   ! ------------------------------------------
-  function approxop_ne_ssc(a, b) result(res)
+  pure elemental function approx_ne_sp_op(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
     logical :: res
-    res = abs(a - b) .gt. default_stol
-  end function approxop_ne_ssc
+    res = ane(a, b)
+  end function approx_ne_sp_op
   !
-  function approxop_ne_sarr(a, b) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = abs(a - b) .gt. default_stol
-  end function approxop_ne_sarr
-  !
-  function approxop_ne_dsc(a, b) result(res)
+  pure elemental function approx_ne_dp_op(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
     logical :: res
-    res = abs(a - b) .gt. default_dtol
-  end function approxop_ne_dsc
+    res = ane(a, b)
+  end function approx_ne_dp_op
   !
-  function approxop_ne_darr(a, b) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = abs(a - b) .gt. default_dtol
-  end function approxop_ne_darr
-  !
-  function approxop_ne_qsc(a, b) result(res)
+  pure elemental function approx_ne_qp_op(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
     logical :: res
-    res = abs(a - b) .gt. default_qtol
-  end function approxop_ne_qsc
-  !
-  function approxop_ne_qarr(a, b) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = abs(a - b) .gt. default_qtol
-  end function approxop_ne_qarr
+    res = ane(a, b)
+  end function approx_ne_qp_op
   ! ------------------------------------------
-  function approxop_lt_ssc(a, b) result(res)
+  pure elemental function approx_lt_sp_op(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
     logical :: res
-    res = a .lt. b - default_stol
-  end function approxop_lt_ssc
+    res = alt(a, b)
+  end function approx_lt_sp_op
   !
-  function approxop_lt_sarr(a, b) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .lt. b - default_stol
-  end function approxop_lt_sarr
-  !
-  function approxop_lt_dsc(a, b) result(res)
+  pure elemental function approx_lt_dp_op(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
     logical :: res
-    res = a .lt. b - default_dtol
-  end function approxop_lt_dsc
+    res = alt(a, b)
+  end function approx_lt_dp_op
   !
-  function approxop_lt_darr(a, b) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .lt. b - default_dtol
-  end function approxop_lt_darr
-  !
-  function approxop_lt_qsc(a, b) result(res)
+  pure elemental function approx_lt_qp_op(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
     logical :: res
-    res = a .lt. b - default_qtol
-  end function approxop_lt_qsc
-  !
-  function approxop_lt_qarr(a, b) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .lt. b - default_qtol
-  end function approxop_lt_qarr
+    res = alt(a, b)
+  end function approx_lt_qp_op
   ! ------------------------------------------
-  function approxop_le_ssc(a, b) result(res)
+  pure elemental function approx_le_sp_op(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
     logical :: res
-    res = a .le. b + default_stol
-  end function approxop_le_ssc
+    res = ale(a, b)
+  end function approx_le_sp_op
   !
-  function approxop_le_sarr(a, b) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .le. b + default_stol
-  end function approxop_le_sarr
-  !
-  function approxop_le_dsc(a, b) result(res)
+  pure elemental function approx_le_dp_op(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
     logical :: res
-    res = a .le. b + default_dtol
-  end function approxop_le_dsc
+    res = ale(a, b)
+  end function approx_le_dp_op
   !
-  function approxop_le_darr(a, b) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .le. b + default_dtol
-  end function approxop_le_darr
-  !
-  function approxop_le_qsc(a, b) result(res)
+  pure elemental function approx_le_qp_op(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
     logical :: res
-    res = a .le. b + default_qtol
-  end function approxop_le_qsc
-  !
-  function approxop_le_qarr(a, b) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .le. b + default_qtol
-  end function approxop_le_qarr
+    res = ale(a, b)
+  end function approx_le_qp_op
   ! ------------------------------------------
-  function approxop_gt_ssc(a, b) result(res)
+  pure elemental function approx_gt_sp_op(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
     logical :: res
-    res = a .gt. b + default_stol
-  end function approxop_gt_ssc
+    res = agt(a, b)
+  end function approx_gt_sp_op
   !
-  function approxop_gt_sarr(a, b) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .gt. b + default_stol
-  end function approxop_gt_sarr
-  !
-  function approxop_gt_dsc(a, b) result(res)
+  pure elemental function approx_gt_dp_op(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
     logical :: res
-    res = a .gt. b + default_dtol
-  end function approxop_gt_dsc
+    res = agt(a, b)
+  end function approx_gt_dp_op
   !
-  function approxop_gt_darr(a, b) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .gt. b + default_dtol
-  end function approxop_gt_darr
-  !
-  function approxop_gt_qsc(a, b) result(res)
+  pure elemental function approx_gt_qp_op(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
     logical :: res
-    res = a .gt. b + default_qtol
-  end function approxop_gt_qsc
-  !
-  function approxop_gt_qarr(a, b) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .gt. b + default_qtol
-  end function approxop_gt_qarr
+    res = agt(a, b)
+  end function approx_gt_qp_op
   ! ------------------------------------------
-  function approxop_ge_ssc(a, b) result(res)
+  pure elemental function approx_ge_sp_op(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
     logical :: res
-    res = a .ge. b - default_stol
-  end function approxop_ge_ssc
+    res = age(a, b)
+  end function approx_ge_sp_op
   !
-  function approxop_ge_sarr(a, b) result(res)
-    real(kind=sp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .ge. b - default_stol
-  end function approxop_ge_sarr
-  !
-  function approxop_ge_dsc(a, b) result(res)
+  pure elemental function approx_ge_dp_op(a, b) result(res)
     real(kind=dp), intent(in) :: a, b
     logical :: res
-    res = a .ge. b - default_dtol
-  end function approxop_ge_dsc
+    res = age(a, b)
+  end function approx_ge_dp_op
   !
-  function approxop_ge_darr(a, b) result(res)
-    real(kind=dp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .ge. b - default_dtol
-  end function approxop_ge_darr
-  !
-  function approxop_ge_qsc(a, b) result(res)
+  pure elemental function approx_ge_qp_op(a, b) result(res)
     real(kind=qp), intent(in) :: a, b
     logical :: res
-    res = a .ge. b - default_qtol
-  end function approxop_ge_qsc
-  !
-  function approxop_ge_qarr(a, b) result(res)
-    real(kind=qp), intent(in) :: a(:), b(:)
-    logical :: res(size(a))
-    res(:) = a .ge. b - default_qtol
-  end function approxop_ge_qarr
+    res = age(a, b)
+  end function approx_ge_qp_op
 end module approx
