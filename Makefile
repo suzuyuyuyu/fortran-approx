@@ -7,13 +7,13 @@
 #>   $(BUILD_DIR)/libapprox.so
 ####################################################
 SRC_DIR:=./src
-INC_DIR:=../test/include
-LIB_DIR:=../test/lib
+INC_DIR:=./example/include
+LIB_DIR:=./example/lib
 STATIC_OBJ_DIR:=./build
 SHARED_OBJ_DIR:=./build
 LIB_NAME:=approx
 
-FC:=gfortran
+FC:=ifort
 FFLAGS:=-O3
 LD:=ar
 LDFLAGS:=rcs
@@ -53,7 +53,7 @@ else
 	POINT_INC_DIR:=-J$(INC_DIR)
 endif
 
-.PHONY: all clean initialize
+.PHONY: all clean _MKDIR
 
 all: BUILD_LIB _OUTPUT_LOG
 
@@ -65,10 +65,10 @@ BUILD_STATIC_LIB: $(STATIC_OBJS)
 BUILD_SHARED_LIB: $(SHARED_OBJS)
 	$(FC) -shared -o $(SHARED_LIB) $(SHARED_OBJS)
 
-$(STATIC_OBJ_DIR)/%.o: $(SRC_DIR)/%.F90 | initialize
+$(STATIC_OBJ_DIR)/%.o: $(SRC_DIR)/%.F90 | _MKDIR
 	$(FC) $(FFLAGS) $(POINT_INC_DIR) -c $< -o $@
 
-$(SHARED_OBJ_DIR)/%.o: $(SRC_DIR)/%.F90 | initialize
+$(SHARED_OBJ_DIR)/%.o: $(SRC_DIR)/%.F90 | _MKDIR
 	$(FC) -fPIC $(FFLAGS) $(POINT_INC_DIR) -c $< -o $@
 
 _OUTPUT_LOG:
@@ -88,7 +88,7 @@ _OUTPUT_LOG:
 	@if [ "$(DO_NOTICE_MESSAGE)" = "1" ]; then echo -e "    Both Archive Files and Shared Object Libraries Have Been Created."; fi
 
 
-initialize:
+_MKDIR:
 	@mkdir -p $(INC_DIR) $(STATIC_BUILD_DIR) $(SHARED_BUILD_DIR) $(STATIC_OBJ_DIR) $(SHARED_OBJ_DIR)
 
 clean:
