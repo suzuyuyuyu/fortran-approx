@@ -13,7 +13,7 @@ STATIC_OBJ_DIR:=./build
 SHARED_OBJ_DIR:=./build
 LIB_NAME:=approx
 
-FC:=ifort
+FC:=gfortran
 FFLAGS:=-O3
 LD:=ar
 LDFLAGS:=rcs
@@ -47,7 +47,7 @@ ifeq ($(TARGET),)
 	$(error "No target specified")
 endif
 
-ifeq ($(filter $(FC),mpiifort ifort),$(FC))
+ifeq ($(filter $(FC),mpiifort ifort mpiifx ifx),$(FC))
 	POINT_INC_DIR:=-module $(INC_DIR)
 else
 	POINT_INC_DIR:=-J$(INC_DIR)
