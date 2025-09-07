@@ -2,12 +2,12 @@
 #> OUT:
 #>   $(STATIC_OBJ_DIR)/approx.o
 #>   $(SHARED_OBJ_DIR)/approx.o
-#>   $(INC_DIR)/approx.mod
+#>   $(MOD_DIR)/approx.mod
 #>   $(BUILD_DIR)/libapprox.a
 #>   $(BUILD_DIR)/libapprox.so
 ####################################################
 SRC_DIR:=./src
-INC_DIR:=./example/include
+MOD_DIR:=./example/include
 LIB_DIR:=./example/lib
 STATIC_OBJ_DIR:=./build
 SHARED_OBJ_DIR:=./build
@@ -27,7 +27,7 @@ STATIC_LIB:=$(STATIC_BUILD_DIR)/lib$(LIB_NAME).a
 SHARED_BUILD_DIR:=$(LIB_DIR)
 SHARED_OBJS:=$(SHARED_OBJ_DIR)/$(LIB_NAME).o
 SHARED_LIB:=$(SHARED_BUILD_DIR)/lib$(LIB_NAME).so
-MOD:=$(INC_DIR)/$(LIB_NAME).mod
+MOD:=$(MOD_DIR)/$(LIB_NAME).mod
 
 TARGET:=
 DO_NOTICE_MESSAGE:=0
@@ -48,9 +48,13 @@ ifeq ($(TARGET),)
 endif
 
 ifeq ($(filter $(FC),mpiifort ifort mpiifx ifx),$(FC))
-	POINT_INC_DIR:=-module $(INC_DIR)
+	MOD_DIR_FLAG:=$(addprefix -module ,$(MOD_DIR))
 else
-	POINT_INC_DIR:=-J$(INC_DIR)
+	ifeq ($(filter $(FC),mpifrtpx frtpx),$(FC))
+		MOD_DIR_FLAG:=$(addprefix -M,$(MOD_DIR))
+	else
+		MOD_DIR_FLAG:=$(addprefix -J,$(MOD_DIR))
+	endif
 endif
 
 .PHONY: all clean _MKDIR
@@ -66,10 +70,10 @@ BUILD_SHARED_LIB: $(SHARED_OBJS)
 	$(FC) -shared -o $(SHARED_LIB) $(SHARED_OBJS)
 
 $(STATIC_OBJ_DIR)/%.o: $(SRC_DIR)/%.F90 | _MKDIR
-	$(FC) $(FFLAGS) $(POINT_INC_DIR) -c $< -o $@
+	$(FC) $(FFLAGS) $(MOD_DIR_FLAG) -c $< -o $@
 
 $(SHARED_OBJ_DIR)/%.o: $(SRC_DIR)/%.F90 | _MKDIR
-	$(FC) -fPIC $(FFLAGS) $(POINT_INC_DIR) -c $< -o $@
+	$(FC) -fPIC $(FFLAGS) $(MOD_DIR_FLAG) -c $< -o $@
 
 _OUTPUT_LOG:
 	@echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -78,7 +82,7 @@ _OUTPUT_LOG:
 	@echo -e ":- CONFIG"
 	@echo -e "    - FC      = \e[35m$(FC)\e[0m"
 	@echo -e "    - FFLAGS  = \e[35m$(FFLAGS)\e[0m"
-	@echo -e "    - INC_DIR = \e[35m$(abspath $(INC_DIR))\e[0m"
+	@echo -e "    - MOD_DIR = \e[35m$(abspath $(MOD_DIR))\e[0m"
 	@echo -e "    - LIB_DIR = \e[35m$(abspath $(LIB_DIR))\e[0m"
 	@echo -e ":- CREATED"
 	@if [ "$(DO_GENERATE_STATIC)" = "1" ] && [ -f "$(STATIC_LIB)" ]; then echo -e "    - \e[36m$(abspath $(STATIC_LIB))\e[0m"; fi
@@ -89,11 +93,11 @@ _OUTPUT_LOG:
 
 
 _MKDIR:
-	@mkdir -p $(INC_DIR) $(STATIC_BUILD_DIR) $(SHARED_BUILD_DIR) $(STATIC_OBJ_DIR) $(SHARED_OBJ_DIR)
+	@mkdir -p $(MOD_DIR) $(STATIC_BUILD_DIR) $(SHARED_BUILD_DIR) $(STATIC_OBJ_DIR) $(SHARED_OBJ_DIR)
 
 clean:
 	@rm -f $(STATIC_OBJS) $(SHARED_OBJS) $(MOD) $(STATIC_LIB) $(SHARED_LIB)
-	@$(call DELETE_EMPTY_DIR, $(INC_DIR))
+	@$(call DELETE_EMPTY_DIR, $(MOD_DIR))
 	@$(call DELETE_EMPTY_DIR, $(LIB_DIR))
 	@$(call DELETE_EMPTY_DIR, $(STATIC_OBJ_DIR))
 	@$(call DELETE_EMPTY_DIR, $(SHARED_OBJ_DIR))
