@@ -4,6 +4,7 @@
 ![M|m]akefile
 ![D|d]ockerfile
 *.exe
+a.out
 
 # OS/Editor
 Thumb.db
@@ -21,24 +22,10 @@ Zone.Identifier
 *.bak
 __pycache__/
 
-*.synctex.gz
-*.fdb_latexmk
-*.synctex
-*.synctex(busy)
-*.synctex.gz(busy)
-*.pdfsync
-*.rubbercache
-rubber.cache
-*.aux
-*.log
-*.fls
-*.toc
-*.out
-*.bbl
-*.blg
-*.dvi
-*.ps
-.pdf
 *.mod
-
 *.o
+*.so
+*.a
+
+/build/
+/include/
