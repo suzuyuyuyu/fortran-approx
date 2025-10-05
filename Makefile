@@ -13,7 +13,7 @@ STATIC_OBJ_DIR:=./build
 SHARED_OBJ_DIR:=./build
 LIB_NAME:=approx
 
-FC:=gfortran
+FC:=ifx
 FFLAGS:=-O3
 LD:=ar
 LDFLAGS:=rcs
