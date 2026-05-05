@@ -26,6 +26,7 @@ module approx
   end type
   type(tolerance_parameter), parameter :: default = tolerance_parameter()
 
+  ! --- absolute tolerance interfaces ---
   interface aeq
     module procedure approx_eq_sp, approx_eq_dp, approx_eq_qp
     module procedure approx_eq_sp_tol, approx_eq_dp_tol, approx_eq_qp_tol
@@ -53,6 +54,37 @@ module approx
 
   public :: aeq, sne, slt, ale, sgt, age
 
+  ! --- hybrid (absolute + relative) tolerance interfaces ---
+  ! default: uses default%a*tol as atol and default%r*tol as rtol
+  ! explicit: haeq(a, b, atol, rtol)
+  interface haeq
+    module procedure approx_eq_sp_h, approx_eq_dp_h, approx_eq_qp_h
+    module procedure approx_eq_sp_hybrid, approx_eq_dp_hybrid, approx_eq_qp_hybrid
+  end interface haeq
+  interface hsne
+    module procedure strict_ne_sp_h, strict_ne_dp_h, strict_ne_qp_h
+    module procedure strict_ne_sp_hybrid, strict_ne_dp_hybrid, strict_ne_qp_hybrid
+  end interface hsne
+  interface hslt
+    module procedure strict_lt_sp_h, strict_lt_dp_h, strict_lt_qp_h
+    module procedure strict_lt_sp_hybrid, strict_lt_dp_hybrid, strict_lt_qp_hybrid
+  end interface hslt
+  interface hale
+    module procedure approx_le_sp_h, approx_le_dp_h, approx_le_qp_h
+    module procedure approx_le_sp_hybrid, approx_le_dp_hybrid, approx_le_qp_hybrid
+  end interface hale
+  interface hsgt
+    module procedure strict_gt_sp_h, strict_gt_dp_h, strict_gt_qp_h
+    module procedure strict_gt_sp_hybrid, strict_gt_dp_hybrid, strict_gt_qp_hybrid
+  end interface hsgt
+  interface hage
+    module procedure approx_ge_sp_h, approx_ge_dp_h, approx_ge_qp_h
+    module procedure approx_ge_sp_hybrid, approx_ge_dp_hybrid, approx_ge_qp_hybrid
+  end interface hage
+
+  public :: haeq, hsne, hslt, hale, hsgt, hage
+
+  ! --- absolute tolerance operators ---
   interface operator(.approx.)
     module procedure approx_eq_sp, approx_eq_dp, approx_eq_qp
   end interface operator(.approx.)
@@ -78,8 +110,33 @@ module approx
   public :: operator(.approx.)
   public :: operator(.aeq.), operator(.sne.), operator(.slt.), operator(.ale.), operator(.sgt.), operator(.age.)
 
+  ! --- hybrid tolerance operators (use default atol/rtol) ---
+  interface operator(.haeq.)
+    module procedure approx_eq_sp_h, approx_eq_dp_h, approx_eq_qp_h
+  end interface operator(.haeq.)
+  interface operator(.hsne.)
+    module procedure strict_ne_sp_h, strict_ne_dp_h, strict_ne_qp_h
+  end interface operator(.hsne.)
+  interface operator(.hslt.)
+    module procedure strict_lt_sp_h, strict_lt_dp_h, strict_lt_qp_h
+  end interface operator(.hslt.)
+  interface operator(.hale.)
+    module procedure approx_le_sp_h, approx_le_dp_h, approx_le_qp_h
+  end interface operator(.hale.)
+  interface operator(.hsgt.)
+    module procedure strict_gt_sp_h, strict_gt_dp_h, strict_gt_qp_h
+  end interface operator(.hsgt.)
+  interface operator(.hage.)
+    module procedure approx_ge_sp_h, approx_ge_dp_h, approx_ge_qp_h
+  end interface operator(.hage.)
+
+  public :: operator(.haeq.), operator(.hsne.), operator(.hslt.), operator(.hale.), operator(.hsgt.), operator(.hage.)
+
 contains
 
+  ! ==========================================================================
+  ! Absolute tolerance: |a - b| <= tol
+  ! ==========================================================================
   pure elemental function approx_eq_sp(a, b) result(res)
     real(kind=sp), intent(in) :: a, b
     logical :: res
@@ -313,4 +370,224 @@ contains
     logical :: res
     res = a .ge. b - tol
   end function approx_ge_qp_tol
+
+  ! ==========================================================================
+  ! Hybrid tolerance: |a - b| <= atol + rtol * max(|a|, |b|)
+  ! ==========================================================================
+
+  pure elemental function approx_eq_sp_h(a, b) result(res)
+    real(kind=sp), intent(in) :: a, b
+    logical :: res
+    res = abs(a - b) .le. default%asptol + default%rsptol * max(abs(a), abs(b))
+  end function approx_eq_sp_h
+  !
+  pure elemental function approx_eq_dp_h(a, b) result(res)
+    real(kind=dp), intent(in) :: a, b
+    logical :: res
+    res = abs(a - b) .le. default%adptol + default%rdptol * max(abs(a), abs(b))
+  end function approx_eq_dp_h
+  !
+  pure elemental function approx_eq_qp_h(a, b) result(res)
+    real(kind=qp), intent(in) :: a, b
+    logical :: res
+    res = abs(a - b) .le. default%aqptol + default%rqptol * max(abs(a), abs(b))
+  end function approx_eq_qp_h
+  !
+  pure elemental function approx_eq_sp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=sp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = abs(a - b) .le. atol + rtol * max(abs(a), abs(b))
+  end function approx_eq_sp_hybrid
+  !
+  pure elemental function approx_eq_dp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=dp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = abs(a - b) .le. atol + rtol * max(abs(a), abs(b))
+  end function approx_eq_dp_hybrid
+  !
+  pure elemental function approx_eq_qp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=qp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = abs(a - b) .le. atol + rtol * max(abs(a), abs(b))
+  end function approx_eq_qp_hybrid
+  ! ------------------------------------------
+  pure elemental function strict_ne_sp_h(a, b) result(res)
+    real(kind=sp), intent(in) :: a, b
+    logical :: res
+    res = abs(a - b) .gt. default%asptol + default%rsptol * max(abs(a), abs(b))
+  end function strict_ne_sp_h
+  !
+  pure elemental function strict_ne_dp_h(a, b) result(res)
+    real(kind=dp), intent(in) :: a, b
+    logical :: res
+    res = abs(a - b) .gt. default%adptol + default%rdptol * max(abs(a), abs(b))
+  end function strict_ne_dp_h
+  !
+  pure elemental function strict_ne_qp_h(a, b) result(res)
+    real(kind=qp), intent(in) :: a, b
+    logical :: res
+    res = abs(a - b) .gt. default%aqptol + default%rqptol * max(abs(a), abs(b))
+  end function strict_ne_qp_h
+  !
+  pure elemental function strict_ne_sp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=sp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = abs(a - b) .gt. atol + rtol * max(abs(a), abs(b))
+  end function strict_ne_sp_hybrid
+  !
+  pure elemental function strict_ne_dp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=dp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = abs(a - b) .gt. atol + rtol * max(abs(a), abs(b))
+  end function strict_ne_dp_hybrid
+  !
+  pure elemental function strict_ne_qp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=qp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = abs(a - b) .gt. atol + rtol * max(abs(a), abs(b))
+  end function strict_ne_qp_hybrid
+  ! ------------------------------------------
+  pure elemental function strict_lt_sp_h(a, b) result(res)
+    real(kind=sp), intent(in) :: a, b
+    logical :: res
+    res = a .lt. b - (default%asptol + default%rsptol * max(abs(a), abs(b)))
+  end function strict_lt_sp_h
+  !
+  pure elemental function strict_lt_dp_h(a, b) result(res)
+    real(kind=dp), intent(in) :: a, b
+    logical :: res
+    res = a .lt. b - (default%adptol + default%rdptol * max(abs(a), abs(b)))
+  end function strict_lt_dp_h
+  !
+  pure elemental function strict_lt_qp_h(a, b) result(res)
+    real(kind=qp), intent(in) :: a, b
+    logical :: res
+    res = a .lt. b - (default%aqptol + default%rqptol * max(abs(a), abs(b)))
+  end function strict_lt_qp_h
+  !
+  pure elemental function strict_lt_sp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=sp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .lt. b - (atol + rtol * max(abs(a), abs(b)))
+  end function strict_lt_sp_hybrid
+  !
+  pure elemental function strict_lt_dp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=dp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .lt. b - (atol + rtol * max(abs(a), abs(b)))
+  end function strict_lt_dp_hybrid
+  !
+  pure elemental function strict_lt_qp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=qp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .lt. b - (atol + rtol * max(abs(a), abs(b)))
+  end function strict_lt_qp_hybrid
+  ! ------------------------------------------
+  pure elemental function approx_le_sp_h(a, b) result(res)
+    real(kind=sp), intent(in) :: a, b
+    logical :: res
+    res = a .le. b + (default%asptol + default%rsptol * max(abs(a), abs(b)))
+  end function approx_le_sp_h
+  !
+  pure elemental function approx_le_dp_h(a, b) result(res)
+    real(kind=dp), intent(in) :: a, b
+    logical :: res
+    res = a .le. b + (default%adptol + default%rdptol * max(abs(a), abs(b)))
+  end function approx_le_dp_h
+  !
+  pure elemental function approx_le_qp_h(a, b) result(res)
+    real(kind=qp), intent(in) :: a, b
+    logical :: res
+    res = a .le. b + (default%aqptol + default%rqptol * max(abs(a), abs(b)))
+  end function approx_le_qp_h
+  !
+  pure elemental function approx_le_sp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=sp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .le. b + (atol + rtol * max(abs(a), abs(b)))
+  end function approx_le_sp_hybrid
+  !
+  pure elemental function approx_le_dp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=dp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .le. b + (atol + rtol * max(abs(a), abs(b)))
+  end function approx_le_dp_hybrid
+  !
+  pure elemental function approx_le_qp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=qp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .le. b + (atol + rtol * max(abs(a), abs(b)))
+  end function approx_le_qp_hybrid
+  ! ------------------------------------------
+  pure elemental function strict_gt_sp_h(a, b) result(res)
+    real(kind=sp), intent(in) :: a, b
+    logical :: res
+    res = a .gt. b + (default%asptol + default%rsptol * max(abs(a), abs(b)))
+  end function strict_gt_sp_h
+  !
+  pure elemental function strict_gt_dp_h(a, b) result(res)
+    real(kind=dp), intent(in) :: a, b
+    logical :: res
+    res = a .gt. b + (default%adptol + default%rdptol * max(abs(a), abs(b)))
+  end function strict_gt_dp_h
+  !
+  pure elemental function strict_gt_qp_h(a, b) result(res)
+    real(kind=qp), intent(in) :: a, b
+    logical :: res
+    res = a .gt. b + (default%aqptol + default%rqptol * max(abs(a), abs(b)))
+  end function strict_gt_qp_h
+  !
+  pure elemental function strict_gt_sp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=sp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .gt. b + (atol + rtol * max(abs(a), abs(b)))
+  end function strict_gt_sp_hybrid
+  !
+  pure elemental function strict_gt_dp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=dp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .gt. b + (atol + rtol * max(abs(a), abs(b)))
+  end function strict_gt_dp_hybrid
+  !
+  pure elemental function strict_gt_qp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=qp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .gt. b + (atol + rtol * max(abs(a), abs(b)))
+  end function strict_gt_qp_hybrid
+  ! ------------------------------------------
+  pure elemental function approx_ge_sp_h(a, b) result(res)
+    real(kind=sp), intent(in) :: a, b
+    logical :: res
+    res = a .ge. b - (default%asptol + default%rsptol * max(abs(a), abs(b)))
+  end function approx_ge_sp_h
+  !
+  pure elemental function approx_ge_dp_h(a, b) result(res)
+    real(kind=dp), intent(in) :: a, b
+    logical :: res
+    res = a .ge. b - (default%adptol + default%rdptol * max(abs(a), abs(b)))
+  end function approx_ge_dp_h
+  !
+  pure elemental function approx_ge_qp_h(a, b) result(res)
+    real(kind=qp), intent(in) :: a, b
+    logical :: res
+    res = a .ge. b - (default%aqptol + default%rqptol * max(abs(a), abs(b)))
+  end function approx_ge_qp_h
+  !
+  pure elemental function approx_ge_sp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=sp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .ge. b - (atol + rtol * max(abs(a), abs(b)))
+  end function approx_ge_sp_hybrid
+  !
+  pure elemental function approx_ge_dp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=dp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .ge. b - (atol + rtol * max(abs(a), abs(b)))
+  end function approx_ge_dp_hybrid
+  !
+  pure elemental function approx_ge_qp_hybrid(a, b, atol, rtol) result(res)
+    real(kind=qp), intent(in) :: a, b, atol, rtol
+    logical :: res
+    res = a .ge. b - (atol + rtol * max(abs(a), abs(b)))
+  end function approx_ge_qp_hybrid
 end module approx

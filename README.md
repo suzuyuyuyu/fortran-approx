@@ -1,35 +1,126 @@
 # fortran-approx
 
 ## Description
-This repository provides **approx.F90**, a simple Fortran module.
-It enables approximate comparisons analogous to the standard relational operators `.eq.`, `.ne.`, `.lt.`, `.le.`, `.gt.`, and `.ge.`.
-The default tolerance is 1.0e-10, and it can be changed either by modifying the module or by passing an argument to the function.
 
-In addition, the following custom operators are provided: `.aeq.`, `.sne.`, `.slt.`, `.ale.`, `.sgt.`, and `.age.`
-These operators perform comparisons that honor the module's tolerance.
-They use the same tolerance value, which can be changed only by modifying the module.
+A Fortran module providing approximate comparison functions for floating-point numbers.
+Analogues of the standard relational operators (`.eq.`, `.ne.`, `.lt.`, `.le.`, `.gt.`, `.ge.`) are provided in two tolerance modes:
 
-## Available functions and operators
-### Functions
-- `approx_eq(x, y, tol)`
-- `strict_ne(x, y, tol)`
-- `strict_lt(x, y, tol)`
-- `approx_le(x, y, tol)`
-- `strict_gt(x, y, tol)`
-- `approx_ge(x, y, tol)`
+| Mode | Formula | When to use |
+|---|---|---|
+| **Absolute** | `|a - b| <= tol` | Values of similar magnitude near 1.0 |
+| **Hybrid** | `|a - b| <= atol + rtol * max(|a|, |b|)` | Values across different scales |
 
-The argument `tol` can be ignored.
+All functions are `pure elemental` and work on both scalars and arrays.
+Supported types: `real32` (sp), `real64` (dp), `real128` (qp).
 
-### Operators
-- `.approx.`
-- `.aeq.` (alias of `.approx.`)
-- `.sne.`
-- `.slt.`
-- `.ale.`
-- `.sgt.`
-- `.age.`
+Default tolerances (absolute and relative): `1.0e-10` for all types.
 
-## Roadmap
-- [ ] Provide variants without optional arguments to reduce runtime overhead
-- [ ] Publish as a static/shared library
-- [ ] Set the default tolerance to a combined absolute + relative form (abs_tol + rel_tol style)
+---
+
+## API
+
+### Absolute tolerance
+
+| Function | Operator | Description |
+|---|---|---|
+| `aeq(a, b [,tol])` | `.aeq.` / `.approx.` | Approximate equal: `|a-b| <= tol` |
+| `sne(a, b [,tol])` | `.sne.` | Strict not equal: `|a-b| > tol` |
+| `slt(a, b [,tol])` | `.slt.` | Strict less than: `a < b - tol` |
+| `ale(a, b [,tol])` | `.ale.` | Approx less or equal: `a <= b + tol` |
+| `sgt(a, b [,tol])` | `.sgt.` | Strict greater than: `a > b + tol` |
+| `age(a, b [,tol])` | `.age.` | Approx greater or equal: `a >= b - tol` |
+
+When `tol` is omitted, `default%adptol = 1.0e-10` (or sp/qp equivalent) is used.
+
+### Hybrid tolerance
+
+| Function | Operator | Description |
+|---|---|---|
+| `haeq(a, b [,atol, rtol])` | `.haeq.` | Approximate equal |
+| `hsne(a, b [,atol, rtol])` | `.hsne.` | Strict not equal |
+| `hslt(a, b [,atol, rtol])` | `.hslt.` | Strict less than |
+| `hale(a, b [,atol, rtol])` | `.hale.` | Approx less or equal |
+| `hsgt(a, b [,atol, rtol])` | `.hsgt.` | Strict greater than |
+| `hage(a, b [,atol, rtol])` | `.hage.` | Approx greater or equal |
+
+When `atol`/`rtol` are omitted, `default%adptol` and `default%rdptol` are used.
+Operators use the default hybrid tolerance.
+
+---
+
+## Usage
+
+```fortran
+use approx
+use iso_fortran_env, only: dp=>real64
+
+real(dp) :: a, b, arr(3)
+
+! absolute tolerance (default 1e-10)
+if (aeq(a, b)) ...
+if (a .aeq. b) ...
+if (aeq(a, b, 1.0e-8_dp)) ...   ! explicit tol
+
+! hybrid tolerance (default atol=1e-10, rtol=1e-10)
+if (haeq(a, b)) ...
+if (a .haeq. b) ...
+if (haeq(a, b, 1.0e-6_dp, 1.0e-9_dp)) ...   ! explicit atol, rtol
+
+! elemental: works on arrays
+logical :: mask(3)
+mask = aeq(arr, 1.0_dp)
+mask = haeq(arr, 1.0_dp, 1.0e-8_dp, 1.0e-10_dp)
+```
+
+---
+
+## Build
+
+Requires CMake >= 3.21 and a Fortran compiler (gfortran or ifx).
+
+### Using presets (recommended)
+
+```sh
+# GNU Fortran
+cmake --preset gnu
+cmake --build --preset gnu
+ctest --preset gnu
+cmake --install build/gnu
+
+# Intel Fortran (ifx)
+cmake --preset intel-llvm
+cmake --build --preset intel-llvm
+ctest --preset intel-llvm
+cmake --install build/intel-llvm
+```
+
+### Manual
+
+```sh
+cmake -DCMAKE_Fortran_COMPILER=gfortran -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=./install -S . -B build
+cmake --build build
+ctest --test-dir build
+cmake --install build
+```
+
+### Install layout
+
+```
+install/
+├── include/
+│   └── approx.mod
+└── lib64/
+    ├── libapprox.a
+    └── cmake/approx/
+        ├── approxConfig.cmake
+        ├── approxConfigVersion.cmake
+        └── approxTargets.cmake
+```
+
+### Using as a CMake dependency
+
+```cmake
+find_package(approx 1.0 REQUIRED)
+target_link_libraries(myapp PRIVATE approx::approx)
+```

@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(fortran_approx LANGUAGES Fortran)
+project(fortran_approx VERSION 1.0.0 LANGUAGES Fortran)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "." CACHE PATH "Default install prefix" FORCE)
 endif()
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "Output directory for archives")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "Output directory for libraries")
@@ -46,3 +47,27 @@ add_executable(approx_example example/main.f90)
 target_link_libraries(approx_example PRIVATE approx)
 
 add_test(NAME RunExample COMMAND approx_example)
+
+install(EXPORT approxTargets
+    FILE approxTargets.cmake
+    NAMESPACE approx::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/approx
+)
+
+configure_package_config_file(
+    cmake/approxConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/approxConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/approx
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/approxConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/approxConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/approxConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/approx
+)

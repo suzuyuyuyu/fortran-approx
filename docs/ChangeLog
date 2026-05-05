@@ -1,0 +1,17 @@
+version 1.0.0, 2026-05-05
+- Added hybrid tolerance comparison functions (haeq, hsne, hslt, hale, hsgt, hage).
+  Formula: |a - b| <= atol + rtol * max(|a|, |b|)
+  Supports default (no-arg) and explicit (atol, rtol) variants for sp, dp, qp.
+- Added hybrid tolerance operators: .haeq., .hsne., .hslt., .hale., .hsgt., .hage.
+- Added CMakePresets.json with configure/build/test presets for GNU (gfortran) and Intel LLVM (ifx).
+- Restructured as an installable CMake package with approxConfig.cmake and version file.
+- Updated README with full API reference and build instructions.
+
+---
+version 0.0.1, 2026-05-05
+- Initial release of Fortran Approximation Library.
+- Added basic support of CMake build system.
+
+---
+version 0.0.0, before 2026-
+- Initial development of Fortran Approximation Library.

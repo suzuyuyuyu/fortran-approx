@@ -1,0 +1,62 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "gnu",
+      "displayName": "GNU Fortran - Release",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/gnu",
+      "cacheVariables": {
+        "CMAKE_Fortran_COMPILER": "gfortran",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/gnu"
+      }
+    },
+    {
+      "name": "intel-llvm",
+      "displayName": "Intel LLVM Fortran (ifx) - Release",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/ifx",
+      "cacheVariables": {
+        "CMAKE_Fortran_COMPILER": "ifx",
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/install/ifx"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "gnu",
+      "displayName": "Build with GNU Fortran",
+      "configurePreset": "gnu"
+    },
+    {
+      "name": "intel-llvm",
+      "displayName": "Build with Intel LLVM Fortran (ifx)",
+      "configurePreset": "intel-llvm"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "gnu",
+      "displayName": "Test (GNU Fortran)",
+      "configurePreset": "gnu",
+      "output": {
+        "verbosity": "verbose"
+      }
+    },
+    {
+      "name": "intel-llvm",
+      "displayName": "Test (Intel LLVM Fortran ifx)",
+      "configurePreset": "intel-llvm",
+      "output": {
+        "verbosity": "verbose"
+      }
+    }
+  ]
+}
